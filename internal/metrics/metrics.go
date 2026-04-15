@@ -5,57 +5,58 @@ import (
 	"time"
 )
 
-// Snapshot holds a point-in-time summary of scanner activity.
+// Snapshot is an immutable copy of collected metrics at a point in time.
 type Snapshot struct {
-	TotalScans   int64
-	PortsAdded   int64
-	PortsRemoved int64
-	LastScanAt   time.Time
-	LastScanDur  time.Duration
+	TotalScans       int64
+	TotalPortsSeen   int64
+	PortsAdded       int64
+	PortsRemoved     int64
+	LastScanAt       time.Time
+	LastScanDuration time.Duration
+	LastPortCount    int
 }
 
-// Collector tracks runtime metrics for portwatch.
+// Collector accumulates runtime metrics for portwatch.
 type Collector struct {
-	mu           sync.RWMutex
-	totalScans   int64
-	portsAdded   int64
-	portsRemoved int64
-	lastScanAt   time.Time
-	lastScanDur  time.Duration
+	mu               sync.Mutex
+	totalScans       int64
+	totalPortsSeen   int64
+	portsAdded       int64
+	portsRemoved     int64
+	lastScanAt       time.Time
+	lastScanDuration time.Duration
+	lastPortCount    int
 }
 
-// NewCollector returns an initialised Collector.
+// NewCollector returns a zero-value Collector ready for use.
 func NewCollector() *Collector {
 	return &Collector{}
 }
 
-// RecordScan records the completion of a single scan cycle.
-func (c *Collector) RecordScan(dur time.Duration, added, removed int) {
+// RecordScan updates metrics after a single scan cycle completes.
+func (c *Collector) RecordScan(portCount, added, removed int, duration time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.totalScans++
+	c.totalPortsSeen += int64(portCount)
 	c.portsAdded += int64(added)
 	c.portsRemoved += int64(removed)
 	c.lastScanAt = time.Now()
-	c.lastScanDur = dur
+	c.lastScanDuration = duration
+	c.lastPortCount = portCount
 }
 
-// Snapshot returns a consistent copy of current metrics.
+// Snapshot returns a consistent copy of the current metrics.
 func (c *Collector) Snapshot() Snapshot {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return Snapshot{
-		TotalScans:   c.totalScans,
-		PortsAdded:   c.portsAdded,
-		PortsRemoved: c.portsRemoved,
-		LastScanAt:   c.lastScanAt,
-		LastScanDur:  c.lastScanDur,
-	}
-}
-
-// Reset clears all counters. Intended for testing.
-func (c *Collector) Reset() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	*c = Collector{}
+	return Snapshot{
+		TotalScans:       c.totalScans,
+		TotalPortsSeen:   c.totalPortsSeen,
+		PortsAdded:       c.portsAdded,
+		PortsRemoved:     c.portsRemoved,
+		LastScanAt:       c.lastScanAt,
+		LastScanDuration: c.lastScanDuration,
+		LastPortCount:    c.lastPortCount,
+	}
 }

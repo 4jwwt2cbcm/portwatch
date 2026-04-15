@@ -8,68 +8,70 @@ import (
 func TestNewCollectorZeroValues(t *testing.T) {
 	c := NewCollector()
 	s := c.Snapshot()
-	if s.TotalScans != 0 || s.PortsAdded != 0 || s.PortsRemoved != 0 {
-		t.Fatalf("expected zero values, got %+v", s)
+	if s.TotalScans != 0 || s.TotalPortsSeen != 0 || s.PortsAdded != 0 || s.PortsRemoved != 0 {
+		t.Errorf("expected zero values, got %+v", s)
 	}
 	if !s.LastScanAt.IsZero() {
-		t.Fatalf("expected zero time, got %v", s.LastScanAt)
+		t.Error("expected zero LastScanAt")
 	}
 }
 
 func TestRecordScanIncrementsTotalScans(t *testing.T) {
 	c := NewCollector()
-	c.RecordScan(10*time.Millisecond, 0, 0)
-	c.RecordScan(20*time.Millisecond, 0, 0)
+	c.RecordScan(5, 2, 0, time.Millisecond)
+	c.RecordScan(5, 0, 1, time.Millisecond)
 	s := c.Snapshot()
 	if s.TotalScans != 2 {
-		t.Fatalf("expected TotalScans=2, got %d", s.TotalScans)
+		t.Errorf("expected TotalScans=2, got %d", s.TotalScans)
 	}
 }
 
 func TestRecordScanAccumulatesPorts(t *testing.T) {
 	c := NewCollector()
-	c.RecordScan(5*time.Millisecond, 3, 1)
-	c.RecordScan(5*time.Millisecond, 2, 4)
+	c.RecordScan(3, 3, 0, time.Millisecond)
+	c.RecordScan(4, 1, 0, time.Millisecond)
 	s := c.Snapshot()
-	if s.PortsAdded != 5 {
-		t.Fatalf("expected PortsAdded=5, got %d", s.PortsAdded)
+	if s.TotalPortsSeen != 7 {
+		t.Errorf("expected TotalPortsSeen=7, got %d", s.TotalPortsSeen)
 	}
-	if s.PortsRemoved != 5 {
-		t.Fatalf("expected PortsRemoved=5, got %d", s.PortsRemoved)
+	if s.PortsAdded != 4 {
+		t.Errorf("expected PortsAdded=4, got %d", s.PortsAdded)
 	}
 }
 
 func TestRecordScanSetsLastScanFields(t *testing.T) {
 	c := NewCollector()
 	before := time.Now()
-	c.RecordScan(42*time.Millisecond, 1, 0)
-	after := time.Now()
+	c.RecordScan(7, 0, 2, 42*time.Millisecond)
 	s := c.Snapshot()
-	if s.LastScanAt.Before(before) || s.LastScanAt.After(after) {
-		t.Fatalf("LastScanAt %v outside expected range [%v, %v]", s.LastScanAt, before, after)
+	if s.LastPortCount != 7 {
+		t.Errorf("expected LastPortCount=7, got %d", s.LastPortCount)
 	}
-	if s.LastScanDur != 42*time.Millisecond {
-		t.Fatalf("expected LastScanDur=42ms, got %v", s.LastScanDur)
+	if s.LastScanDuration != 42*time.Millisecond {
+		t.Errorf("expected duration 42ms, got %s", s.LastScanDuration)
+	}
+	if s.LastScanAt.Before(before) {
+		t.Error("LastScanAt should be after test start")
 	}
 }
 
 func TestSnapshotIsConsistentCopy(t *testing.T) {
 	c := NewCollector()
-	c.RecordScan(1*time.Millisecond, 1, 0)
+	c.RecordScan(2, 1, 0, time.Millisecond)
 	s1 := c.Snapshot()
-	c.RecordScan(1*time.Millisecond, 1, 0)
+	c.RecordScan(3, 1, 0, time.Millisecond)
 	s2 := c.Snapshot()
 	if s1.TotalScans == s2.TotalScans {
-		t.Fatalf("expected snapshots to differ after second record")
+		t.Error("snapshots should differ after second record")
 	}
 }
 
-func TestReset(t *testing.T) {
+func TestPortsRemovedAccumulates(t *testing.T) {
 	c := NewCollector()
-	c.RecordScan(10*time.Millisecond, 5, 3)
-	c.Reset()
+	c.RecordScan(5, 0, 2, time.Millisecond)
+	c.RecordScan(3, 0, 1, time.Millisecond)
 	s := c.Snapshot()
-	if s.TotalScans != 0 || s.PortsAdded != 0 || s.PortsRemoved != 0 {
-		t.Fatalf("expected zero values after reset, got %+v", s)
+	if s.PortsRemoved != 3 {
+		t.Errorf("expected PortsRemoved=3, got %d", s.PortsRemoved)
 	}
 }
