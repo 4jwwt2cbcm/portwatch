@@ -2,30 +2,29 @@ package watch
 
 import "time"
 
-// BackoffPolicy defines how retry delays are calculated after scan errors.
+// BackoffPolicy defines the parameters for exponential backoff.
 type BackoffPolicy struct {
-	Initial    time.Duration
-	Multiplier float64
-	Max        time.Duration
+	Initial time.Duration
+	Max     time.Duration
+	Factor  float64
 }
 
-// DefaultBackoffPolicy returns a sensible exponential backoff configuration.
+// DefaultBackoffPolicy returns a sensible default backoff policy.
 func DefaultBackoffPolicy() BackoffPolicy {
 	return BackoffPolicy{
-		Initial:    2 * time.Second,
-		Multiplier: 2.0,
-		Max:        60 * time.Second,
+		Initial: 500 * time.Millisecond,
+		Max:     30 * time.Second,
+		Factor:  2.0,
 	}
 }
 
-// Backoff tracks consecutive failures and computes the next wait duration.
+// Backoff tracks exponential backoff state.
 type Backoff struct {
 	policy  BackoffPolicy
 	current time.Duration
-	failures int
 }
 
-// NewBackoff creates a Backoff using the given policy.
+// NewBackoff creates a new Backoff with the given policy.
 func NewBackoff(policy BackoffPolicy) *Backoff {
 	return &Backoff{
 		policy:  policy,
@@ -33,25 +32,23 @@ func NewBackoff(policy BackoffPolicy) *Backoff {
 	}
 }
 
-// Failure records a failed attempt and returns the duration to wait before retrying.
-func (b *Backoff) Failure() time.Duration {
-	b.failures++
-	delay := b.current
-	next := time.Duration(float64(b.current) * b.policy.Multiplier)
+// Next returns the current wait duration and advances the backoff.
+func (b *Backoff) Next() time.Duration {
+	d := b.current
+	next := time.Duration(float64(b.current) * b.policy.Factor)
 	if next > b.policy.Max {
 		next = b.policy.Max
 	}
 	b.current = next
-	return delay
+	return d
 }
 
-// Reset clears the failure count and resets the delay to the initial value.
+// Reset restores the backoff to its initial duration.
 func (b *Backoff) Reset() {
-	b.failures = 0
 	b.current = b.policy.Initial
 }
 
-// Failures returns the number of consecutive failures recorded.
-func (b *Backoff) Failures() int {
-	return b.failures
+// Current returns the current wait duration without advancing.
+func (b *Backoff) Current() time.Duration {
+	return b.current
 }
