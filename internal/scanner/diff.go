@@ -1,44 +1,44 @@
 package scanner
 
-// Diff computes the difference between two port snapshots.
-// It returns newly opened ports and ports that have been closed.
+// Diff holds the result of comparing two port snapshots.
 type Diff struct {
-	Opened []PortState
-	Closed []PortState
+	Added   []PortState
+	Removed []PortState
 }
 
-// HasChanges returns true when there are any opened or closed ports.
+// HasChanges reports whether the diff contains any changes.
 func (d Diff) HasChanges() bool {
-	return len(d.Opened) > 0 || len(d.Closed) > 0
+	return len(d.Added) > 0 || len(d.Removed) > 0
 }
 
-// Compare takes a previous and current snapshot and returns a Diff.
-func Compare(previous, current []PortState) Diff {
-	prevSet := toSet(previous)
-	currSet := toSet(current)
+// Compare returns the diff between a previous and current list of PortStates.
+func Compare(prev, curr []PortState) Diff {
+	prevSet := toSet(prev)
+	currSet := toSet(curr)
 
-	var opened, closed []PortState
+	var diff Diff
 
 	for key, ps := range currSet {
 		if _, exists := prevSet[key]; !exists {
-			opened = append(opened, ps)
+			diff.Added = append(diff.Added, ps)
 		}
 	}
 
 	for key, ps := range prevSet {
 		if _, exists := currSet[key]; !exists {
-			closed = append(closed, ps)
+			diff.Removed = append(diff.Removed, ps)
 		}
 	}
 
-	return Diff{Opened: opened, Closed: closed}
+	return diff
 }
 
-func toSet(states []PortState) map[string]PortState {
-	m := make(map[string]PortState, len(states))
-	for _, s := range states {
-		key := s.Protocol + "|" + s.Address + "|" + string(rune(s.Port))
-		m[key] = s
+// toSet converts a slice of PortState into a map keyed by "port/protocol".
+func toSet(ports []PortState) map[string]PortState {
+	m := make(map[string]PortState, len(ports))
+	for _, p := range ports {
+		key := p.String()
+		m[key] = p
 	}
 	return m
 }
