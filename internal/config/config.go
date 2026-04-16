@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -34,6 +35,26 @@ func DefaultConfig() Config {
 			PortMax:   65535,
 		},
 	}
+}
+
+// Validate checks that the configuration values are logically consistent.
+func (c Config) Validate() error {
+	if c.Interval <= 0 {
+		return fmt.Errorf("interval must be positive, got %s", c.Interval)
+	}
+	if c.Filter.PortMin < 1 || c.Filter.PortMin > 65535 {
+		return fmt.Errorf("port_min must be between 1 and 65535, got %d", c.Filter.PortMin)
+	}
+	if c.Filter.PortMax < 1 || c.Filter.PortMax > 65535 {
+		return fmt.Errorf("port_max must be between 1 and 65535, got %d", c.Filter.PortMax)
+	}
+	if c.Filter.PortMin > c.Filter.PortMax {
+		return fmt.Errorf("port_min (%d) must not exceed port_max (%d)", c.Filter.PortMin, c.Filter.PortMax)
+	}
+	if c.LogFormat != "text" && c.LogFormat != "json" {
+		return fmt.Errorf("log_format must be \"text\" or \"json\", got %q", c.LogFormat)
+	}
+	return nil
 }
 
 // Load reads a YAML config file from path and merges it over the defaults.
