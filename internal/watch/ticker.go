@@ -17,3 +17,16 @@ func IntervalFromSeconds(secs int) time.Duration {
 	}
 	return time.Duration(secs) * time.Second
 }
+
+// MinInterval is the smallest polling interval allowed.
+const MinInterval = time.Second
+
+// ClampInterval ensures d is at least MinInterval, returning MinInterval if d
+// is zero or negative. Use this when accepting user-supplied durations directly
+// rather than going through IntervalFromSeconds.
+func ClampInterval(d time.Duration) time.Duration {
+	if d < MinInterval {
+		return MinInterval
+	}
+	return d
+}
