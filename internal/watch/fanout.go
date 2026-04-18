@@ -26,6 +26,20 @@ func (f *FanOut[T]) Subscribe() <-chan T {
 	return ch
 }
 
+// Unsubscribe removes the given channel from the subscriber list and closes it.
+// If the channel was not found, this is a no-op.
+func (f *FanOut[T]) Unsubscribe(sub <-chan T) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i, ch := range f.subs {
+		if ch == sub {
+			f.subs = append(f.subs[:i], f.subs[i+1:]...)
+			close(ch)
+			return
+		}
+	}
+}
+
 // Publish sends value to all current subscribers.
 // Subscribers whose channels are full are skipped (non-blocking).
 func (f *FanOut[T]) Publish(v T) {
