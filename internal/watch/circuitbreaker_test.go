@@ -79,3 +79,21 @@ func TestCircuitBreakerDoesNotOpenBeforeMax(t *testing.T) {
 		t.Errorf("expected closed, got %s", cb.State())
 	}
 }
+
+func TestCircuitBreakerHalfOpenFailureReopens(t *testing.T) {
+	cb := makeCircuitBreaker(1, 10*time.Millisecond)
+	cb.RecordFailure()
+	time.Sleep(20 * time.Millisecond)
+	// Transition to half-open
+	if err := cb.Allow(); err != nil {
+		t.Fatalf("expected nil in half-open, got %v", err)
+	}
+	// A failure in half-open should reopen the circuit
+	cb.RecordFailure()
+	if cb.State() != "open" {
+		t.Errorf("expected open after half-open failure, got %s", cb.State())
+	}
+	if err := cb.Allow(); err != ErrCircuitOpen {
+		t.Errorf("expected ErrCircuitOpen after reopen, got %v", err)
+	}
+}
