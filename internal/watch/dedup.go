@@ -49,6 +49,13 @@ func (d *DedupWindow) Evict() {
 	}
 }
 
+// Len returns the number of keys currently tracked in the dedup window.
+func (d *DedupWindow) Len() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return len(d.seen)
+}
+
 // Reset clears all seen entries.
 func (d *DedupWindow) Reset() {
 	d.mu.Lock()
