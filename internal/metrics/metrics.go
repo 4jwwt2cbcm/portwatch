@@ -60,3 +60,16 @@ func (c *Collector) Snapshot() Snapshot {
 		LastPortCount:    c.lastPortCount,
 	}
 }
+
+// Reset clears all accumulated metrics back to their zero values.
+func (c *Collector) Reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.totalScans = 0
+	c.totalPortsSeen = 0
+	c.portsAdded = 0
+	c.portsRemoved = 0
+	c.lastScanAt = time.Time{}
+	c.lastScanDuration = 0
+	c.lastPortCount = 0
+}
