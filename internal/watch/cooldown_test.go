@@ -60,6 +60,17 @@ func TestCooldownActiveReturnsTrueWhileCooling(t *testing.T) {
 	}
 }
 
+func TestCooldownActiveFalseAfterExpiry(t *testing.T) {
+	c := makeCooldown(10 * time.Millisecond)
+	now := time.Now()
+	c.now = func() time.Time { return now }
+	c.Allow("scan")
+	c.now = func() time.Time { return now.Add(20 * time.Millisecond) }
+	if c.Active("scan") {
+		t.Error("expected Active to return false after cooldown expiry")
+	}
+}
+
 func TestCooldownDifferentKeysIndependent(t *testing.T) {
 	c := makeCooldown(time.Minute)
 	c.Allow("a")
