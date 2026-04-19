@@ -46,6 +46,10 @@ func TestCircuitBreakerIntegration(t *testing.T) {
 		t.Fatalf("expected half-open to allow, got %v", err)
 	}
 
+	if cb.State() != "half-open" {
+		t.Fatalf("expected half-open state after recovery window, got %s", cb.State())
+	}
+
 	// Simulate success.
 	cb.RecordSuccess()
 	if cb.State() != "closed" {
