@@ -36,6 +36,13 @@ func (bw *BatchWriter[T]) Send(item T) {
 	}
 }
 
+// SendAll adds multiple items, flushing immediately whenever the buffer fills up.
+func (bw *BatchWriter[T]) SendAll(items []T) {
+	for _, item := range items {
+		bw.Send(item)
+	}
+}
+
 // Run starts the periodic flush loop, blocking until ctx is cancelled.
 func (bw *BatchWriter[T]) Run(ctx context.Context) {
 	ticker := time.NewTicker(bw.interval)
