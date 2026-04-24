@@ -85,3 +85,17 @@ func TestSignalHandlerWithCancelParentCancels(t *testing.T) {
 		t.Fatal("context was not cancelled after parent cancel")
 	}
 }
+
+func TestSignalHandlerWithCancelCancelFuncStopsRun(t *testing.T) {
+	h, _ := makeSignalHandler(syscall.SIGTERM)
+	ctx, cancel := h.WithCancel(context.Background())
+
+	cancel()
+
+	select {
+	case <-ctx.Done():
+		// expected: calling cancel() should stop the context
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("context was not cancelled after calling cancel")
+	}
+}
