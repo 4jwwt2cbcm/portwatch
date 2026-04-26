@@ -44,3 +44,14 @@ func (c *Counter) Reset() int64 {
 	c.value = 0
 	return prev
 }
+
+// Snapshot atomically returns the current value and resets the counter to zero.
+// This is useful for periodic reporting where you want to capture and clear
+// the accumulated count in a single operation without a gap between reads.
+func (c *Counter) Snapshot() int64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	snap := c.value
+	c.value = 0
+	return snap
+}
