@@ -54,3 +54,18 @@ func (c *Checkpoint) Reset() {
 	defer c.mu.Unlock()
 	c.last = time.Time{}
 }
+
+// UntilNext returns the remaining time until the next checkpoint is due.
+// It returns zero if the checkpoint is already due or has never been marked.
+func (c *Checkpoint) UntilNext() time.Duration {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.last.IsZero() {
+		return 0
+	}
+	remaining := c.interval - time.Since(c.last)
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
+}
